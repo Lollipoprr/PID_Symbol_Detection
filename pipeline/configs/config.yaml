@@ -1,0 +1,235 @@
+data:
+  root_dir: data
+  raw:
+    raw_images_dir: raw/images
+    raw_class_aware_labels_dir: raw/labels_class_aware
+    raw_class_agnostic_labels_dir: raw/labels_class_agnostic
+  inference:
+    stage_1_images_dir: inference/stage_1/images
+    stage_1_labels_aware_dir: inference/stage2/labels
+    stage_1_labels_agnostic_dir: inference/stage_1/labels_agnostic
+    stage_2_images_dir: inference/stage2/images
+    stage_2_labels_aware_dir: inference/stage2/labels
+  processed:
+    stage_1:
+      class_agnostic_patches_dir: processed/stage_1/patches_class_agnostic
+      class_aware_patches_dir: processed/stage_1/patches_class_aware
+      class_agnostic_yolo_train_dir: processed/stage_1/yolo_class_agnostic
+      class_aware_yolo_train_dir: processed/stage_1/yolo_class_aware
+    stage_2:
+      symbol_crops_dir: processed/stage_2/crops
+      train_dir: processed/stage_2/train
+      val_dir: processed/stage_2/val
+  results:
+    stage_1:
+      class_agnostic_results_dir: results/stage_1/class_agnostic
+      class_aware_results_dir: results/stage_1/class_aware
+    stage_2:
+      inference_results_dir: results/stage_2/inference_results
+models:
+  root_dir: models
+  base_yolo_path: base_yolo_models/yolo26n.pt
+  stage1_class_agnostic_weights_dir: stage1/class_agnostic
+  stage1_class_aware_weights_dir: stage1/class_aware
+  stage2_weights_dir: stage2/baseline
+slice_size: 1024
+slice_overlap_ratio: 0.5
+slice_edge_margin_ratio: 0.075
+nms_iou_threshold: 0.5
+confidence_threshold: 0.25
+num_classes_agnostic: 1
+num_classes_aware: 63
+class_agnostic_class_names:
+- Symbol
+class_aware_class_names:
+- '0'
+- '1'
+- '2'
+- '3'
+- '4'
+- '5'
+- '6'     
+- '7'
+- '8'
+- '9'
+- '10'
+- '11'
+- '12'
+- '13'
+- '14'
+- '15'
+- '16'
+- '17'
+- '18'
+- '19'
+- '20'
+- '21'
+- '22'
+- '23'
+- '24'
+- '25'
+- '26'
+- '27'
+- '28'
+- '29'
+- '30'
+- '31'
+- '32'
+- '33'
+- '34'
+- '35'
+- '36'
+- '37'
+- '38'
+- '39'
+- '40'
+- '41'
+- '42'
+- '43'
+- '44'
+- '45'
+- '46'
+- '47'
+- '48'
+- '49'
+- '50'
+- '51'
+- '52'
+- '53'
+- '54'
+- '55'
+- '56'
+- '57'
+- '58'
+- '59'
+- '60'
+- '61'
+- '62'
+data_preprocessing:
+  min_visibility: 0.3
+training:
+  batch_size: 4
+  epochs: 5
+  learning_rate: 0.001
+  image_size:
+  - 1024
+  - 1024
+
+# SVG-Guided Structure Enhancement配置
+stage2_svg_structure:
+  # 模型配置
+  embed_dim: 64
+  svg_channels: 64
+  dropout: 0.1
+  backbone: swin_tiny_patch4_window7_224
+  pretrained: true
+  
+  # 损失函数配置
+  loss_mode: baseline_preserving_hybrid      # svg_only | photo_only | hybrid_triplet | hybrid_cosine | baseline_preserving_hybrid
+  lambda_photo: 1.0
+  lambda_svg: 0.1
+  beta_preserve: 1.0
+  preserve_type: cosine          # embedding | cosine | pairwise
+  baseline_teacher_checkpoint: models/stage2/baseline/best_model.pth
+  init_from_baseline: true
+  gamma_unknown: 0.05            # proxy-unknown boundary loss weight
+  unknown_margin: 0.60
+  unknown_dir: data/unknown_crops
+  unknown_max_samples: 300
+  unknown_batch_size: 64
+  triplet_margin: 1.0
+  photo_triplet_margin: 1.0
+  svg_triplet_margin: 1.0
+  svg_align_type: triplet        # triplet | cosine
+  lambda_align: 0.3
+  lambda_distill: 1.0
+  distill_edge: 1.0
+  distill_response: 0.5
+  distill_global: 0.3
+  
+  # SVG数据配置
+  svg_dir: data/processed/stage_2/svg_to_png
+  svg_train_dir: data/processed/stage_2/svg_to_png
+  svg_val_dir: data/processed/stage_2/svg_to_png
+  
+  # 训练配置
+  max_samples_per_class: 400
+  semi_hard_candidates: 10
+  semi_hard_margin: 1.0
+  epochs: 25
+  batch_size: 64
+  learning_rate: 3e-05
+  weight_decay: 0.05
+  warmup_epochs: 2
+  real_val_enabled: true
+  real_val_metric: real_val_macro_f1
+  real_val_max_train_per_class: 100
+  real_val_max_val_per_class: null
+  real_val_batch_size: 64
+  
+  # 原型配置
+  prototype_temperature: 0.1
+  prototype_adaptive_temp: true
+  output_suffix: svg_structure_bp_hybrid_svg0.1_b1.0_cos_unknown300_g0.05_m0.60_realval
+
+stage2_baseline:
+  max_samples_per_class: 400
+  semi_hard_candidates: 10
+  data_dir: processed/stage_2/train
+  num_classes: 63
+  train_val_split:
+  - 0.8
+  - 0.2
+  embedding_size: 64
+  backbone: swin_tiny_patch4_window7_224
+  pretrained: true
+  epochs: 25
+  batch_size: 128
+  learning_rate: 1.0e-05
+  weight_decay: 0.05
+  warmup_epochs: 2
+  grad_accum_steps: 1
+  label_smoothing: 0.1
+  eval_interval: 1
+  eval_max_images: 20
+  svg_batch_size: 128
+  # Unknown Detection 参数（保留）
+  unknown_threshold: 0.4
+  unknown_aug_prob: 0.1
+  # 原型参数
+  prototype_temperature: 0.1
+  prototype_adaptive_temp: true
+
+
+stage1_inference:
+  save_txt: true
+  save_conf: false
+stage2_inference:
+  distance_metric: euclidean
+  prototype_weighting: true # 消融实验开关：true=加权原型(默认), false=简单平均原型
+  rejection_mode: distance_only
+  distance_threshold: 0.3
+  gap_threshold: 0.4
+  energy_threshold: null
+  rejection_threshold: null
+evaluation_metrics:
+  openset:
+    known_class_ids: []
+    rejection_mode: distance_only
+    report_metrics:
+    - Macro-F1
+    - FRR
+    - URR
+    embedding_quality:
+      enabled: true
+      report_metrics:
+      - intra_compactness
+      - inter_separation
+      - svg_photo_consistency
+      per_class_report: true
+    gate_analysis:
+      record_gates: true
+      script_path: src/scripts/visualize_gate_weights.py
+      output_dir: results/stage_2/gate_analysis
+
+#
